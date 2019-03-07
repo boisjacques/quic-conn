@@ -9,14 +9,13 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
+	"github.com/boisjacques/quic-conn"
 	"github.com/tylerwince/godbg"
 	"io"
 	"math/big"
 	"net"
 	"os"
 	"time"
-
-	// "github.com/boisjacques/quic-conn"
 )
 
 const BUFFERSIZE = 512
@@ -33,12 +32,12 @@ func main() {
 	if *startServer {
 		// start the server
 		go func() {
-			_, err := generateTLSConfig()
+			tlsConfig, err := generateTLSConfig()
 			if err != nil {
 				panic(err)
 			}
 
-			ln, err := net.Listen("tcp", addr)
+			ln, err := quicconn.Listen("udp", addr, tlsConfig)
 			if err != nil {
 				panic(err)
 			}
@@ -57,8 +56,8 @@ func main() {
 	if *startClient {
 		// run the client
 		go func() {
-			// tlsConf := &tls.Config{InsecureSkipVerify: true}
-			conn, err := net.Dial("tcp", addr)
+			 tlsConfig := &tls.Config{InsecureSkipVerify: true}
+			conn, err := quicconn.Dial(addr, tlsConfig)
 			if err != nil {
 				panic(err)
 			}
@@ -68,9 +67,20 @@ func main() {
 			var fileNameLen int32
 
 			err = binary.Read(conn, binary.BigEndian, &fileSize)
+			if err != nil {
+				panic(err)
+			}
 			godbg.Dbg(fileSize)
 			err = binary.Read(conn, binary.BigEndian, &fileNameLen)
+			if err != nil {
+				panic(err)
+			}
 			godbg.Dbg(fileNameLen)
+
+			err = binary.Write(conn, binary.BigEndian, 1)
+			if err != nil {
+				panic(err)
+			}
 
 			fileNameBuffer := make([]byte, fileNameLen)
 			_,err = io.ReadFull(conn, fileNameBuffer)
@@ -170,6 +180,15 @@ func sendFileToClient(connection net.Conn) {
 	if err != nil {
 		panic(err)
 	}
+	var handshake int32
+	err = binary.Read(connection, binary.BigEndian, &handshake)
+	if err != nil {
+		panic(err)
+	}
+	if handshake != 1 {
+		panic("handshake failed")
+	}
+
 	time.Sleep(10 * time.Millisecond)
 	sendBuffer := make([]byte, BUFFERSIZE)
 	fmt.Println("Start sending file!")
