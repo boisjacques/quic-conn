@@ -3,7 +3,7 @@ package quicconn
 import (
 	"net"
 
-	quic "github.com/lucas-clemente/quic-go"
+	quic "github.com/boisjacques/qed"
 )
 
 type server struct {
