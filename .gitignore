@@ -8,3 +8,9 @@
 *.mkv
 
 example/recvd_
+
+example/rundebug_client\.sh
+
+example/rundebug_server\.sh
+
+example/out\.file

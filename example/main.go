@@ -22,10 +22,12 @@ const BUFFERSIZE = 512
 
 func main() {
 	// utils.SetLogLevel(utils.LogLevelDebug)
+	var addr string
+	var file string
 
 	startServer := flag.Bool("s", false, "server")
 	startClient := flag.Bool("c", false, "client")
-	var addr string
+	flag.StringVar(&file, "file", "5MB.zip", "filename")
 	flag.StringVar(&addr, "addr", "", "address:port")
 	flag.Parse()
 
@@ -49,14 +51,14 @@ func main() {
 			}
 			fmt.Println("Established connection")
 
-			go sendFileToClient(conn)
+			go sendFileToClient(conn, file)
 		}()
 	}
 
 	if *startClient {
 		// run the client
 		go func() {
-			 tlsConfig := &tls.Config{InsecureSkipVerify: true}
+			tlsConfig := &tls.Config{InsecureSkipVerify: true}
 			conn, err := quicconn.Dial(addr, tlsConfig)
 			if err != nil {
 				panic(err)
@@ -77,13 +79,15 @@ func main() {
 			}
 			godbg.Dbg(fileNameLen)
 
-			err = binary.Write(conn, binary.BigEndian, 1)
+			var handshake int32
+			handshake = 1
+			err = binary.Write(conn, binary.BigEndian, handshake)
 			if err != nil {
 				panic(err)
 			}
 
 			fileNameBuffer := make([]byte, fileNameLen)
-			_,err = io.ReadFull(conn, fileNameBuffer)
+			_, err = io.ReadFull(conn, fileNameBuffer)
 
 			fileName := string(fileNameBuffer[:fileNameLen])
 			godbg.Dbg(fileName)
@@ -143,10 +147,10 @@ func generateTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func sendFileToClient(connection net.Conn) {
+func sendFileToClient(connection net.Conn, f string) {
 	fmt.Println("Connection Established!")
 	defer connection.Close()
-	file, err := os.Open("100MB.zip")
+	file, err := os.Open(f)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -176,7 +180,7 @@ func sendFileToClient(connection net.Conn) {
 		panic(err)
 	}
 	godbg.Dbg("sent file name length")
-	_,err = io.WriteString(connection, fileName)
+	_, err = io.WriteString(connection, fileName)
 	if err != nil {
 		panic(err)
 	}
