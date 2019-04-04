@@ -12,13 +12,18 @@ import (
 	"github.com/boisjacques/quic-conn"
 	"github.com/tylerwince/godbg"
 	"io"
+	"log"
 	"math/big"
 	"net"
+	_ "net/http/pprof"
 	"os"
+	"runtime/pprof"
 	"time"
 )
 
-const BUFFERSIZE = 512
+const BUFFERSIZE = 1024
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 func main() {
 	// utils.SetLogLevel(utils.LogLevelDebug)
@@ -30,6 +35,17 @@ func main() {
 	flag.StringVar(&file, "file", "5MB.zip", "filename")
 	flag.StringVar(&addr, "addr", "", "address:port")
 	flag.Parse()
+
+	finishChan := make(chan bool)
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	if *startServer {
 		// start the server
@@ -51,7 +67,7 @@ func main() {
 			}
 			fmt.Println("Established connection")
 
-			go sendFileToClient(conn, file)
+			go sendFileToClient(conn, file, finishChan)
 		}()
 	}
 
@@ -101,18 +117,30 @@ func main() {
 
 			for {
 				if (fileSize - receivedBytes) < BUFFERSIZE {
-					io.CopyN(newFile, conn, (fileSize - receivedBytes))
-					conn.Read(make([]byte, (receivedBytes+BUFFERSIZE)-fileSize))
+					_, err = io.CopyN(newFile, conn, (fileSize - receivedBytes))
+					if err != nil {
+						godbg.Dbg(err)
+					}
+					_, err = conn.Read(make([]byte, (receivedBytes+BUFFERSIZE)-fileSize))
+					if err != nil {
+						godbg.Dbg(err)
+					}
 					break
 				}
-				io.CopyN(newFile, conn, BUFFERSIZE)
+				_, err = io.CopyN(newFile, conn, BUFFERSIZE)
+				if err != nil {
+					godbg.Dbg(err)
+				}
 				receivedBytes += BUFFERSIZE
 			}
-			fmt.Println("Received file completely!")
+			if err == nil {
+				fmt.Println("Received file completely!")
+			}
+			finishChan <- true
 		}()
 	}
 
-	time.Sleep(time.Hour)
+	<-finishChan
 }
 
 func generateTLSConfig() (*tls.Config, error) {
@@ -147,7 +175,7 @@ func generateTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func sendFileToClient(connection net.Conn, f string) {
+func sendFileToClient(connection net.Conn, f string, finishChan chan bool) {
 	fmt.Println("Connection Established!")
 	defer connection.Close()
 	file, err := os.Open(f)
@@ -203,6 +231,8 @@ func sendFileToClient(connection net.Conn, f string) {
 		}
 		connection.Write(sendBuffer)
 	}
-	fmt.Println("File has been sent, closing connection!")
-	return
+	fmt.Println("File has been sent, waiting 3 seconds!")
+	time.Sleep(3 * time.Second)
+	fmt.Println("Closing connection...")
+	finishChan <- true
 }

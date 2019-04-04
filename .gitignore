@@ -14,3 +14,9 @@ example/rundebug_client\.sh
 example/rundebug_server\.sh
 
 example/out\.file
+
+*.pprof
+
+*.sh
+
+example/latest_wireshark_trace
