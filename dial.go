@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 
-	quic "github.com/boisjacques/qed"
+	quic "github.com/lucas-clemente/quic-go"
 )
 
 var quicListen = quic.Listen

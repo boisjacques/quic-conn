@@ -88,12 +88,10 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			godbg.Dbg(fileSize)
 			err = binary.Read(conn, binary.BigEndian, &fileNameLen)
 			if err != nil {
 				panic(err)
 			}
-			godbg.Dbg(fileNameLen)
 
 			var handshake int32
 			handshake = 1
@@ -106,7 +104,6 @@ func main() {
 			_, err = io.ReadFull(conn, fileNameBuffer)
 
 			fileName := string(fileNameBuffer[:fileNameLen])
-			godbg.Dbg(fileName)
 			newFile, err := os.Create("recvd_" + fileName)
 
 			if err != nil {
@@ -184,8 +181,6 @@ func sendFileToClient(connection net.Conn, f string, finishChan chan bool) {
 		return
 	}
 	fileInfo, err := file.Stat()
-	godbg.Dbg(fileInfo.Size())
-	godbg.Dbg(fileInfo.Name())
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -195,19 +190,16 @@ func sendFileToClient(connection net.Conn, f string, finishChan chan bool) {
 	fileSize = fileInfo.Size()
 	fileName := fileInfo.Name()
 	fileNameLen = int32(len(fileName))
-	godbg.Dbg(fileNameLen)
 	time.Sleep(10 * time.Millisecond)
 
 	err = binary.Write(connection, binary.BigEndian, fileSize)
 	if err != nil {
 		panic(err)
 	}
-	godbg.Dbg("sent filesize")
 	err = binary.Write(connection, binary.BigEndian, fileNameLen)
 	if err != nil {
 		panic(err)
 	}
-	godbg.Dbg("sent file name length")
 	_, err = io.WriteString(connection, fileName)
 	if err != nil {
 		panic(err)
@@ -231,8 +223,8 @@ func sendFileToClient(connection net.Conn, f string, finishChan chan bool) {
 		}
 		connection.Write(sendBuffer)
 	}
-	fmt.Println("File has been sent, waiting 3 seconds!")
-	time.Sleep(3 * time.Second)
+	fmt.Println("File has been sent, waiting 1 second!")
+	time.Sleep(1 * time.Second)
 	fmt.Println("Closing connection...")
 	finishChan <- true
 }
