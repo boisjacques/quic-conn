@@ -79,7 +79,6 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			defer conn.Close()
 			fmt.Println("Connected to server, start receiving the file name and file size")
 			var fileSize int64
 			var fileNameLen int32
@@ -132,6 +131,12 @@ func main() {
 			}
 			if err == nil {
 				fmt.Println("Received file completely!")
+			} else {
+				godbg.Dbg(err)
+			}
+			err = conn.Close()
+			if err != nil {
+				godbg.Dbg(err)
 			}
 			finishChan <- true
 		}()
