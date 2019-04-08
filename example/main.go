@@ -19,7 +19,7 @@ import (
 	// "github.com/boisjacques/quic-conn"
 )
 
-const BUFFERSIZE = 512
+const BUFFERSIZE = 1024
 
 func main() {
 	// utils.SetLogLevel(utils.LogLevelDebug)
